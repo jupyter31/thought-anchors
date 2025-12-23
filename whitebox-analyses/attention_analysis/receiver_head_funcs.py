@@ -47,9 +47,10 @@ def get_problem_vert_scores(
     model_name: str = "qwen-14b",
     proximity_ignore: int = 4,
     control_depth: bool = False,
+    custom_data_root: Optional[str] = None,
 ) -> np.ndarray:
     problem_num, is_correct = problem_ci
-    text, sentences_w_spacing = get_problem_text_sentences(problem_num, is_correct, model_name)
+    text, sentences_w_spacing = get_problem_text_sentences(problem_num, is_correct, model_name, custom_data_root)
     layer_head_vert_scores = get_all_heads_vert_scores(
         text,
         sentences_w_spacing,
@@ -126,11 +127,13 @@ def get_top_k_receiver_heads(
     top_k: int = 20,
     proximity_ignore: int = 4,
     control_depth: bool = False,
+    custom_data_root: Optional[str] = None,
 ) -> np.ndarray:
     resp_layer_head_verts, _ = get_all_problems_vert_scores(
         model_name=model_name,
         proximity_ignore=proximity_ignore,
         control_depth=control_depth,
+        custom_data_root=custom_data_root,
     )
 
     resp_layer_head_kurts = []
@@ -152,7 +155,10 @@ def get_top_k_receiver_heads(
     return layer_head
 
 
-def get_model_rollouts_root(model_name: str = "qwen-14b") -> str:
+def get_model_rollouts_root(model_name: str = "qwen-14b", custom_data_root: Optional[str] = None) -> str:
+    if custom_data_root is not None:
+        return custom_data_root
+    
     if "qwen" in model_name:
         dir_root = os.path.join(
             "math-rollouts",
@@ -174,9 +180,10 @@ def get_model_rollouts_root(model_name: str = "qwen-14b") -> str:
 def get_problem_text_sentences(
     problem_num: Union[int, str],
     is_correct: bool,
-    model_name: str = "qwen-14b"
+    model_name: str = "qwen-14b",
+    custom_data_root: Optional[str] = None
 ) -> Tuple[str, List[str]]:
-    dir_root = get_model_rollouts_root(model_name)
+    dir_root = get_model_rollouts_root(model_name, custom_data_root)
     if is_correct:
         ci = "correct_base_solution"
     else:
@@ -191,7 +198,7 @@ def get_problem_text_sentences(
     fp_base_solution = os.path.join(dir_problem, "base_solution.json")
     with open(fp_base_solution, "r") as f:
         base_solution = json.load(f)
-    text = base_solution["full_cot"]
+    text = base_solution.get("full_cot") or base_solution.get("cot") or base_solution.get("solution")
     sentences_w_spacing = split_solution_keep_spacing(text)
     sanity_check_sentences(sentences_w_spacing, dir_problem, text)
     return text, sentences_w_spacing
@@ -202,9 +209,10 @@ def get_all_problems_vert_scores(
     model_name: str = "qwen-14b",
     proximity_ignore: int = 4,
     control_depth: bool = False,
+    custom_data_root: Optional[str] = None,
 ) -> Tuple[List[np.ndarray], List[Tuple[int, int]]]:
 
-    dir_root = get_model_rollouts_root(model_name)
+    dir_root = get_model_rollouts_root(model_name, custom_data_root)
 
     correct_incorrect = ["correct_base_solution", "incorrect_base_solution"]
 
@@ -217,11 +225,16 @@ def get_all_problems_vert_scores(
         else:
             is_correct = 1
         dir_ci = os.path.join(dir_root, ci)
+        
+        # Skip if directory doesn't exist
+        if not os.path.exists(dir_ci):
+            continue
+            
         problems = os.listdir(dir_ci)
         for idx_problem, problem in enumerate(problems):
             if problem == 'problem_3935': # 13k tokens long, too intense on the RAM/VRAM
                 continue
-            text, sentences_w_spacing = get_problem_text_sentences(problem, is_correct, model_name)
+            text, sentences_w_spacing = get_problem_text_sentences(problem, is_correct, model_name, custom_data_root)
 
             # The model will be run.
             # Its sentence-averaged attention weight matrices will be cached.
@@ -260,6 +273,7 @@ def get_all_receiver_head_scores(
     proximity_ignore: int = 4,
     control_depth: bool = False,
     top_k: int = 20,
+    custom_data_root: Optional[str] = None,
 ) -> Tuple[List[np.ndarray], List[Tuple[int, int]]]:
 
     print("Getting top k layer head kurts")
@@ -268,6 +282,7 @@ def get_all_receiver_head_scores(
         top_k=top_k,
         proximity_ignore=proximity_ignore,
         control_depth=control_depth,
+        custom_data_root=custom_data_root,
     )
     print("Getting all vert scores")
 
@@ -275,6 +290,7 @@ def get_all_receiver_head_scores(
         model_name=model_name,
         proximity_ignore=proximity_ignore,
         control_depth=control_depth,
+        custom_data_root=custom_data_root,
     )
 
     print("Getting rec scores")

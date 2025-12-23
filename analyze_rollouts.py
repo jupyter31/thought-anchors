@@ -12,6 +12,10 @@ from transformers import AutoTokenizer
 from openai import OpenAI
 from dotenv import load_dotenv
 from prompts import DAG_PROMPT
+import sys
+from pathlib import Path as PathLib
+sys.path.insert(0, str(PathLib(__file__).parent / "whitebox-analyses" / "cot_mutation"))
+from clients.azure_foundry_client import AzureFoundryClient
 import re
 from collections import Counter, defaultdict
 from sentence_transformers import SentenceTransformer
@@ -249,6 +253,29 @@ parser.add_argument(
     action="store_true",
     help="If True, use global vocabulary from entire dataset for consistent Laplace smoothing across all KL divergence calculations. If False (default), use local vocabulary (union of answers in each pair of chunks)",
 )
+parser.add_argument(
+    "--use-azure-foundry",
+    action="store_true",
+    help="Use Azure Foundry client instead of OpenAI for chunk labeling",
+)
+parser.add_argument(
+    "--azure-api-key",
+    type=str,
+    default=None,
+    help="Azure API key (defaults to AZURE_API_KEY env var)",
+)
+parser.add_argument(
+    "--azure-endpoint",
+    type=str,
+    default=None,
+    help="Azure inference endpoint (defaults to AZURE_INFERENCE_SDK_ENDPOINT env var)",
+)
+parser.add_argument(
+    "--azure-model",
+    type=str,
+    default=None,
+    help="Azure model deployment name (defaults to DEPLOYMENT_NAME env var)",
+)
 
 args = parser.parse_args()
 # print(f"{args=}")
@@ -284,10 +311,8 @@ plt.rcParams.update(
 # Load environment variables
 load_dotenv()
 
-# Set up OpenAI API key
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-if not client.api_key:
-    raise ValueError("OPENAI_API_KEY not found in .env file")
+# Set up LLM client (will be initialized in main based on args)
+client = None
 
 # Initialize the r1-distill-qwen-14b tokenizer
 tokenizer = AutoTokenizer.from_pretrained(
@@ -401,7 +426,7 @@ def count_tokens(text: str, approximate: bool = True) -> int:
 
 def generate_chunk_summary(chunk_text: str) -> str:
     """
-    Generate a 2-3 word summary of a chunk using OpenAI API.
+    Generate a 2-3 word summary of a chunk using LLM API.
 
     Args:
         chunk_text: The text content of the chunk
@@ -433,14 +458,24 @@ def generate_chunk_summary(chunk_text: str) -> str:
     """
 
     try:
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.0,
-            max_tokens=20,
-        )
-
-        summary = response.choices[0].message.content.strip()
+        if isinstance(client, AzureFoundryClient):
+            result = client.send_chat_request(
+                model_name="gpt-4o-mini",
+                request={
+                    "messages": [{"role": "user", "content": prompt}],
+                    "temperature": 0.0,
+                    "max_tokens": 20,
+                }
+            )
+            summary = result["text"].strip()
+        else:
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.0,
+                max_tokens=20,
+            )
+            summary = response.choices[0].message.content.strip()
 
         # Ensure it's actually 2-3 words
         words = summary.split()
@@ -482,14 +517,24 @@ def generate_problem_nickname(problem_text: str) -> str:
     """
 
     try:
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.0,
-            max_tokens=20,
-        )
-
-        nickname = response.choices[0].message.content.strip()
+        if isinstance(client, AzureFoundryClient):
+            result = client.send_chat_request(
+                model_name="gpt-4o-mini",
+                request={
+                    "messages": [{"role": "user", "content": prompt}],
+                    "temperature": 0.0,
+                    "max_tokens": 20,
+                }
+            )
+            nickname = result["text"].strip()
+        else:
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.0,
+                max_tokens=20,
+            )
+            nickname = response.choices[0].message.content.strip()
 
         # Ensure it's actually 2-3 words
         words = nickname.split()
@@ -505,7 +550,7 @@ def generate_problem_nickname(problem_text: str) -> str:
 
 def label_chunk(problem_text: str, chunks: List[str], chunk_idx: int) -> Dict:
     """
-    Label a chunk using OpenAI API with the DAG prompt.
+    Label a chunk using LLM API with the DAG prompt.
 
     Args:
         problem_text: The problem text
@@ -526,14 +571,26 @@ def label_chunk(problem_text: str, chunks: List[str], chunk_idx: int) -> Dict:
     )
 
     try:
-        response = client.chat.completions.create(
-            model="gpt-4o",
-            messages=[{"role": "user", "content": formatted_prompt}],
-            temperature=0.0,
-            response_format={"type": "json_object"},
-        )
-
-        result = json.loads(response.choices[0].message.content)
+        if isinstance(client, AzureFoundryClient):
+            # Note: Azure Foundry may not support response_format natively
+            # Add JSON instruction to prompt instead
+            json_instruction = "\n\nRespond with valid JSON only."
+            result_data = client.send_chat_request(
+                model_name="DeepSeek-R1-0528",
+                request={
+                    "messages": [{"role": "user", "content": formatted_prompt + json_instruction}],
+                    "temperature": 0.0,
+                }
+            )
+            result = json.loads(result_data["text"])
+        else:
+            response = client.chat.completions.create(
+                model="gpt-4o",
+                messages=[{"role": "user", "content": formatted_prompt}],
+                temperature=0.0,
+                response_format={"type": "json_object"},
+            )
+            result = json.loads(response.choices[0].message.content)
 
         # Add the chunk and its index to the result
         result["chunk"] = chunks[chunk_idx]
@@ -4647,6 +4704,21 @@ def analyze_response_length_statistics(
 
 
 def main():
+    # Initialize LLM client based on user flag
+    global client
+    if args.use_azure_foundry:
+        print("Using Azure Foundry client for chunk labeling")
+        client = AzureFoundryClient(
+            api_key=args.azure_api_key,
+            endpoint=args.azure_endpoint,
+            model_name=args.azure_model,
+        )
+    else:
+        print("Using OpenAI client for chunk labeling")
+        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        if not client.api_key:
+            raise ValueError("OPENAI_API_KEY not found in .env file")
+    
     # Set up directories
     correct_rollouts_dir = (
         Path(args.correct_rollouts_dir)

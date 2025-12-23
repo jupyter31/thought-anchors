@@ -343,6 +343,11 @@ def sanity_check_sentences(sentences_w_spacing, dir_problem, text):
     # Sanity check
     # (the chunks.json removes "\n"also omits the final sentence of the CoT)
     fp_sentences_json = os.path.join(dir_problem, "chunks.json")
+    
+    # Skip sanity check if chunks.json doesn't exist
+    if not os.path.exists(fp_sentences_json):
+        return
+    
     with open(fp_sentences_json, "r") as f:
         sentence_data = json.load(f)
 

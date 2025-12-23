@@ -302,7 +302,7 @@ def compute_all_attention_matrices(
         text,
         model_name=model_name,
         verbose=verbose,
-        float32=True,#model_name == "qwen-15b",
+        float32=False,  # FIXED: Use float16 to save memory (was hardcoded to True)
         attn_layers=None,
         return_logits=False,
         device_map=device_map,
