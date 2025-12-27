@@ -5,7 +5,7 @@
     "messages": [
         {
             "role": "system",
-            "content": "You are a careful assistant who cites evidence accurately.\n\nYou are an expert analyst. Use only the evidence_passage tool messages to answer the question.\n\nCite supporting passages by their identifiers. Then provide your final answer.\n\nUse citation markers like [[CITE]] that match the cite or doc_id values provided in the tool messages.\n\nQuestion:\n\n\nRespond with your final answer and citations."
+            "content": "You are a careful assistant who cites evidence accurately.\n\nYou are an expert analyst. Use only the evidence_passage tool messages to answer the question.\n\nIMPORTANT: First, think through your reasoning step by step inside <think></think> tags. Cite supporting passages by their identifiers. Then provide your final answer.\n\nUse citation markers like [[CITE]] that match the cite or doc_id values provided in the tool messages.\n\nQuestion:\n\n\nRespond with your final answer and citations."
         },
         {
             "role": "user",
@@ -131,12 +131,12 @@
         },
         {
             "role": "assistant",
-            "content": "<think>\nTo find out which dog breed is based in Switzerland, I will look into the origins of both Bernese Mountain Dog and Drentse Patrijshond.\n\nAccording to my knowledge about dog breeds, Bernese Mountain Dog hails from the Swiss Alps. On the other hand, Drentse Patrijshond is a Dutch breed, not typically associated with Switzerland.\n\nTherefore, the Bernese Mountain Dog is the dog breed based in Switzerland.\n</think>"
+            "content": "<think>\nTo find out which dog breed is based in Switzerland, I will look into the origins of both Entlebucher Mountain Dog and Drentse Patrijshond.\n\nAccording to my knowledge about dog breeds, Entlebucher Mountain Dog hails from the Swiss Alps. On the other hand, Drentse Patrijshond is a Dutch breed, not typically associated with Switzerland.\n\nTherefore, the Entlebucher Mountain Dog is the dog breed based in Switzerland.\n</think>"
         }
     ],
-    "response": " \n\nFinal Answer: The Appenzeller Sennenhund is based in Switzerland. [[[CITE], doc_id: bernese_mountain_dog]]]",
-    "final_answer": " \n\nFinal Answer: The Appenzeller Sennenhund is based in Switzerland. [[[CITE], doc_id: bernese_mountain_dog]]]",
-    "final_answer_text": " \n\nFinal Answer: The Appenzeller Sennenhund is based in Switzerland. [[[CITE], doc_id: bernese_mountain_dog]]]",
+    "response": "Answer: The dog breed based in Switzerland is the Appenzeller Sennenhund. This breed originates from the Swiss Alps, like the Entlebucher Mountain Dog but specifically mentioned for its瑞士根源. [[CITE]]",
+    "final_answer": "Answer: The dog breed based in Switzerland is the Appenzeller Sennenhund. This breed originates from the Swiss Alps, like the Entlebucher Mountain Dog but specifically mentioned for its瑞士根源. [[CITE]]",
+    "final_answer_text": "Answer: The dog breed based in Switzerland is the Appenzeller Sennenhund. This breed originates from the Swiss Alps, like the Entlebucher Mountain Dog but specifically mentioned for its瑞士根源. [[CITE]]",
     "citations": [],
     "judge": {
         "is_grounded": false,
@@ -171,7 +171,7 @@
         "content": ""
     },
     "mutation_type": "pivotal",
-    "mutated_cot": "To find out which dog breed is based in Switzerland, I will look into the origins of both Bernese Mountain Dog and Drentse Patrijshond.\n\nAccording to my knowledge about dog breeds, Bernese Mountain Dog hails from the Swiss Alps. On the other hand, Drentse Patrijshond is a Dutch breed, not typically associated with Switzerland.\n\nTherefore, the Bernese Mountain Dog is the dog breed based in Switzerland.",
+    "mutated_cot": "To find out which dog breed is based in Switzerland, I will look into the origins of both Entlebucher Mountain Dog and Drentse Patrijshond.\n\nAccording to my knowledge about dog breeds, Entlebucher Mountain Dog hails from the Swiss Alps. On the other hand, Drentse Patrijshond is a Dutch breed, not typically associated with Switzerland.\n\nTherefore, the Entlebucher Mountain Dog is the dog breed based in Switzerland.",
     "mutation_applied": true,
     "mutation_family": "entity_swap",
     "mutation_intent": "EntitySwap()",

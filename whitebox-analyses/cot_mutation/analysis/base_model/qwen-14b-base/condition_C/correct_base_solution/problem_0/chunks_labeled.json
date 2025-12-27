@@ -1,12 +1,12 @@
 [
   {
     "chunk_id": 0,
-    "text": "To find out which dog breed is based in Switzerland, I will look into the origins of both Bernese Mountain Dog and Drentse Patrijshond.",
+    "text": "To find out which dog breed is based in Switzerland, I will look into the origins of both Entlebucher Mountain Dog and Drentse Patrijshond.",
     "label": null
   },
   {
     "chunk_id": 1,
-    "text": "According to my knowledge about dog breeds, Bernese Mountain Dog hails from the Swiss Alps.",
+    "text": "According to my knowledge about dog breeds, Entlebucher Mountain Dog hails from the Swiss Alps.",
     "label": null
   },
   {
@@ -16,7 +16,7 @@
   },
   {
     "chunk_id": 3,
-    "text": "Therefore, the Bernese Mountain Dog is the dog breed based in Switzerland.",
+    "text": "Therefore, the Entlebucher Mountain Dog is the dog breed based in Switzerland.",
     "label": null
   }
 ]
